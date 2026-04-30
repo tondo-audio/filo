@@ -36,7 +36,7 @@ void PluginManager::scanPlugins(std::function<void(int, String)> progress)
     scanning.store(true);
 
     const File crashGuardDir = File::getSpecialLocation(File::userApplicationDataDirectory)
-                                   .getChildFile("Tondo Audio/Tondo Host");
+                                   .getChildFile("Tondo Audio/Filo");
     crashGuardDir.createDirectory();
 
     const int numFormats = formatManager.getNumFormats();

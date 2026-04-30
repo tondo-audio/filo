@@ -30,7 +30,7 @@ public:
         normalModeInitialised = true;
 
         juce::PropertiesFile::Options opts;
-        opts.applicationName     = "TondoHost";
+        opts.applicationName     = "Filo";
         opts.filenameSuffix      = ".settings";
         opts.osxLibrarySubFolder = "Application Support";
         appProperties.setStorageParameters(opts);

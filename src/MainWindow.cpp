@@ -5,7 +5,7 @@ MainWindow::MainWindow(juce::AudioDeviceManager& dm,
                        AudioEngine& engine,
                        PluginManager& pluginMgr,
                        juce::PropertiesFile& props)
-    : DocumentWindow("Tondo Host",
+    : DocumentWindow("Filo",
                      juce::Colour(0xFF1A1A1A),
                      DocumentWindow::closeButton)
 {

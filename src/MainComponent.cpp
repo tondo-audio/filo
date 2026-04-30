@@ -84,7 +84,7 @@ void MainComponent::paint(Graphics& g)
 
     g.setColour(kText);
     g.setFont(Font(16.0f, Font::bold));
-    g.drawText("Tondo Host", 14, 0, 200, 42, Justification::centredLeft, false);
+    g.drawText("Filo", 14, 0, 200, 42, Justification::centredLeft, false);
 
     // Section separators
     g.setColour(Colour(0xFF333333));

@@ -1,4 +1,4 @@
-# PRD — Tondo Host
+# PRD — Filo
 **Versione:** 0.1  
 **Autore:** Tondo Audio  
 **Stato:** Draft
@@ -15,7 +15,7 @@ Le alternative open source esistenti (Carla, Pedalboard2, Element) sono troppo c
 
 ## 2. Soluzione
 
-**Tondo Host** è un'applicazione standalone macOS, leggera e open source, pensata esclusivamente per chitarristi che vogliono suonare in tempo reale attraverso una catena di plugin AU/VST3.
+**Filo** è un'applicazione standalone macOS, leggera e open source, pensata esclusivamente per chitarristi che vogliono suonare in tempo reale attraverso una catena di plugin AU/VST3.
 
 L'interfaccia ha un unico schermo. Nessun routing visuale, nessun patchbay, nessun concetto DAW.
 
@@ -34,7 +34,7 @@ Chitarrista non tecnico che:
 ## 4. Casi d'uso
 
 ### UC-1 — Sessione base
-1. L'utente apre Tondo Host
+1. L'utente apre Filo
 2. Seleziona l'interfaccia audio (input chitarra, output cuffie/casse)
 3. Aggiunge uno o più plugin alla catena
 4. Suona in tempo reale
@@ -47,7 +47,7 @@ Chitarrista non tecnico che:
 
 ### UC-3 — Suonare sopra YouTube
 1. L'utente apre YouTube nel browser
-2. Apre Tondo Host in parallelo
+2. Apre Filo in parallelo
 3. Il suono della chitarra processato e l'audio del video escono insieme dalle stesse cuffie
 
 ---
@@ -108,7 +108,7 @@ Chitarrista non tecnico che:
 
 ```
 ┌─────────────────────────────────────┐
-│  🎸 Tondo Host                      │
+│  🎸 Filo                      │
 ├─────────────────────────────────────┤
 │  INPUT   [Focusrite 2i2 - Ch.1  ▾]  │
 │  OUTPUT  [Focusrite 2i2 - Mix   ▾]  │
