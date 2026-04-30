@@ -36,10 +36,10 @@ CPMAddPackage(
 
 juce_add_gui_app(Filo
     BUNDLE_ID                       "audio.tondo.filo"
-    PRODUCT_NAME                    "Tondo Host"
+    PRODUCT_NAME                    "Filo"
     COMPANY_NAME                    "Tondo Audio"
     MICROPHONE_PERMISSION_ENABLED   TRUE
-    MICROPHONE_PERMISSION_TEXT      "Tondo Host needs audio input access to process your guitar signal."
+    MICROPHONE_PERMISSION_TEXT      "Filo needs audio input access to process your guitar signal."
 )
 
 target_sources(Filo PRIVATE
