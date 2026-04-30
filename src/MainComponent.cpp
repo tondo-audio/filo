@@ -3,6 +3,7 @@
 #include "plugins/PluginManager.h"
 #include "ui/Theme.h"
 #include "ui/IconPaths.h"
+#include "ui/PluginPicker.h"
 
 using namespace juce;
 
@@ -57,11 +58,15 @@ MainComponent::MainComponent(AudioDeviceManager& dm,
     statusLabel.setJustificationType(Justification::centredLeft);
     addAndMakeVisible(statusLabel);
 
-    if (pluginMgr.getKnownPlugins().getNumTypes() == 0)
-        startScan();
+    addChildComponent(scanOverlay);
 
     chainView.refresh();
     startTimerHz(30);
+
+    // posticipa lo scan all'avvio finché il MainComponent è stato dimensionato,
+    // cosi l'overlay copre l'intera finestra e non parte a 0x0.
+    if (pluginMgr.getKnownPlugins().getNumTypes() == 0)
+        MessageManager::callAsync([this] { startScan(); });
 }
 
 MainComponent::~MainComponent()
@@ -130,6 +135,8 @@ void MainComponent::resized()
 
     statusLabel.setBounds(pad, getHeight() - statusBarH + 2,
                           w - pad * 2, statusBarH - 4);
+
+    scanOverlay.setBounds(getLocalBounds());
 }
 
 void MainComponent::timerCallback()
@@ -141,9 +148,8 @@ void MainComponent::timerCallback()
 void MainComponent::showAddPluginMenu()
 {
     const auto& list = pluginMgr.getKnownPlugins();
-    const int n = list.getNumTypes();
 
-    if (n == 0)
+    if (list.getNumTypes() == 0)
     {
         AlertWindow::showMessageBoxAsync(MessageBoxIconType::InfoIcon,
             "Nessun plugin trovato",
@@ -151,19 +157,9 @@ void MainComponent::showAddPluginMenu()
         return;
     }
 
-    PopupMenu menu;
-    for (int i = 0; i < n; ++i)
-    {
-        const auto& desc = list.getTypes()[i];
-        menu.addItem(i + 1, desc.name + " (" + desc.pluginFormatName + ")");
-    }
-
-    menu.showMenuAsync(PopupMenu::Options().withTargetComponent(addPluginButton),
-        [this, &list](int result)
+    auto picker = std::make_unique<PluginPicker>(list,
+        [this](const PluginDescription& desc)
         {
-            if (result <= 0) return;
-            const auto desc = list.getTypes()[result - 1];
-
             auto* dev = deviceManager.getCurrentAudioDevice();
             const double sr = (dev != nullptr) ? dev->getCurrentSampleRate() : 44100.0;
             const int blockSize = (dev != nullptr) ? dev->getCurrentBufferSizeSamples() : 512;
@@ -181,13 +177,24 @@ void MainComponent::showAddPluginMenu()
                     chainView.refresh();
                 });
         });
+
+    picker->setSize(420, 460);
+
+    const auto target = addPluginButton.getScreenBounds();
+    CallOutBox::launchAsynchronously(std::move(picker), target, nullptr);
 }
 
 void MainComponent::startScan()
 {
     if (pluginMgr.isScanning()) return;
 
+    // blocca l'intera UI per evitare race con la chain audio durante lo scan
+    addPluginButton.setEnabled(false);
     rescanButton.setEnabled(false);
+    deviceBar.setEnabled(false);
+    chainViewport.setEnabled(false);
+    scanOverlay.setActive(true);
+
     statusLabel.setText("Scansione plugin in corso...", dontSendNotification);
 
     Thread::launch([this]
@@ -198,6 +205,7 @@ void MainComponent::startScan()
             {
                 MessageManager::callAsync([this, name]
                 {
+                    scanOverlay.setCurrentItem(name);
                     statusLabel.setText(name.isNotEmpty() ? name : "Scansione...",
                                         dontSendNotification);
                 });
@@ -210,7 +218,13 @@ void MainComponent::startScan()
         MessageManager::callAsync([this]
         {
             pluginMgr.saveToProperties(props);
+
+            scanOverlay.setActive(false);
+            addPluginButton.setEnabled(true);
             rescanButton.setEnabled(true);
+            deviceBar.setEnabled(true);
+            chainViewport.setEnabled(true);
+
             statusLabel.setText(
                 String(pluginMgr.getKnownPlugins().getNumTypes()) + " plugin trovati",
                 dontSendNotification);

@@ -70,6 +70,8 @@ target_sources(Filo PRIVATE
     src/ui/LevelMeter.cpp
     src/ui/LogoView.cpp
     src/ui/PluginChainView.cpp
+    src/ui/PluginPicker.cpp
+    src/ui/ScanOverlay.cpp
 )
 
 target_include_directories(Filo PRIVATE

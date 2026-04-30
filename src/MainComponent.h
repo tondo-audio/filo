@@ -8,6 +8,7 @@
 #include "ui/LevelMeter.h"
 #include "ui/LogoView.h"
 #include "ui/IconButton.h"
+#include "ui/ScanOverlay.h"
 
 class AudioEngine;
 class PluginManager;
@@ -52,6 +53,8 @@ private:
     juce::Label inputMeterLabel  { {}, "INPUT" };
     juce::Label outputMeterLabel { {}, "OUTPUT" };
     juce::Label statusLabel;
+
+    ScanOverlay scanOverlay;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
