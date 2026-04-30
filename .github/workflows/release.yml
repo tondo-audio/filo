@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            platform: macOS
+          - os: windows-latest
+            platform: Windows
+          - os: ubuntu-latest
+            platform: Linux
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev libjack-jackd2-dev \
+            libcurl4-openssl-dev libfreetype-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxext-dev \
+            libxinerama-dev libxrandr-dev libxrender-dev \
+            libwebkit2gtk-4.1-dev libglu1-mesa-dev mesa-common-dev
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Package macOS
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent \
+            "build/Filo_artefacts/Release/Tondo Host.app" \
+            "dist/TondoHost-${GITHUB_REF_NAME}-macOS.zip"
+
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive `
+            -Path "build/Filo_artefacts/Release/Tondo Host.exe" `
+            -DestinationPath "dist/TondoHost-$env:GITHUB_REF_NAME-Windows.zip"
+
+      - name: Package Linux
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist
+          cd "build/Filo_artefacts/Release"
+          zip -r "$GITHUB_WORKSPACE/dist/TondoHost-${GITHUB_REF_NAME}-Linux.zip" "Tondo Host"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.platform }}
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: dist-*
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          name: Tondo Host ${{ github.ref_name }}
+          body: |
+            Plugin host standalone per chitarristi Tondo Audio (catena AU/VST3 a schermo unico).
+
+            ## Install
+
+            ### macOS
+            1. Scarica `TondoHost-${{ github.ref_name }}-macOS.zip` ed estrai.
+            2. Sposta `Tondo Host.app` in `/Applications/`.
+            3. Al primo avvio macOS chiede il permesso microfono — necessario per leggere l'input chitarra.
+
+            ### Windows
+            1. Scarica `TondoHost-${{ github.ref_name }}-Windows.zip` ed estrai.
+            2. `Tondo Host.exe` è lanciabile direttamente (no installer).
+
+            ### Linux
+            1. Scarica `TondoHost-${{ github.ref_name }}-Linux.zip` ed estrai.
+            2. `Tondo Host` è il binario (richiede ALSA o JACK + X11).
+
+            ## Requisiti
+
+            - macOS 12+ (Apple Silicon o Intel)
+            - Windows 10+ (x64)
+            - Linux x86_64 con ALSA/JACK + X11
+
+            > Distribuito non firmato. Su macOS al primo avvio Gatekeeper può chiedere conferma manuale (clic destro → Apri).

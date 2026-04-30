@@ -1,0 +1,15 @@
+build/
+build-release/
+cmake-build-*/
+.DS_Store
+*.o
+*.a
+*.dylib
+.cache/
+.idea/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+
+# Local Claude Code state
+.claude/
