@@ -3,6 +3,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "IconButton.h"
+
 class AudioEngine;
 class PluginManager;
 
@@ -47,9 +49,9 @@ private:
     PluginManager& pluginMgr;
     std::function<void()> onChanged;
 
-    juce::TextButton  uiButton    { "UI" };
-    juce::ToggleButton bypassBtn;
-    juce::TextButton  removeButton{ "×" };
+    IconButton uiButton;
+    IconButton bypassBtn;
+    IconButton removeButton;
 
     std::unique_ptr<PluginWindow> pluginWindow;
 
@@ -74,7 +76,7 @@ public:
     void itemDragExit(const SourceDetails& details) override;
     void itemDropped(const SourceDetails& details) override;
 
-    static constexpr int kRowHeight = 44;
+    static constexpr int kRowHeight = 52;
 
 private:
     int getDropIndex(int localY) const;

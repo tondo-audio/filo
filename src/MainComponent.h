@@ -6,6 +6,8 @@
 #include "ui/DeviceSelectorBar.h"
 #include "ui/PluginChainView.h"
 #include "ui/LevelMeter.h"
+#include "ui/LogoView.h"
+#include "ui/IconButton.h"
 
 class AudioEngine;
 class PluginManager;
@@ -34,6 +36,8 @@ private:
     PluginManager& pluginMgr;
     juce::PropertiesFile& props;
 
+    LogoView logo;
+
     DeviceSelectorBar deviceBar;
 
     juce::Viewport       chainViewport;
@@ -42,8 +46,8 @@ private:
     LevelMeter inputMeter;
     LevelMeter outputMeter;
 
-    juce::TextButton addPluginButton { "+ Aggiungi" };
-    juce::TextButton rescanButton    { "Ri-scansiona" };
+    IconButton addPluginButton;
+    IconButton rescanButton;
 
     juce::Label inputMeterLabel  { {}, "INPUT" };
     juce::Label outputMeterLabel { {}, "OUTPUT" };

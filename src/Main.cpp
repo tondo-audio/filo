@@ -7,6 +7,7 @@
 #include "audio/AudioEngine.h"
 #include "plugins/PluginManager.h"
 #include "plugins/PluginScannerSubprocess.h"
+#include "ui/FiloLookAndFeel.h"
 
 class FiloApplication : public juce::JUCEApplication
 {
@@ -28,6 +29,8 @@ public:
         }
 
         normalModeInitialised = true;
+
+        juce::LookAndFeel::setDefaultLookAndFeel(&filoLookAndFeel);
 
         juce::PropertiesFile::Options opts;
         opts.applicationName     = "Filo";
@@ -84,11 +87,14 @@ public:
         mainWindow.reset();
         audioEngine.reset();
         pluginManager.reset();
+
+        juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
     }
 
     void systemRequestedQuit() override { quit(); }
 
 private:
+    FiloLookAndFeel             filoLookAndFeel;
     juce::ApplicationProperties appProperties;
     juce::AudioDeviceManager    deviceManager;
 

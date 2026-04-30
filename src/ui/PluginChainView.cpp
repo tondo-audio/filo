@@ -1,6 +1,8 @@
 #include "PluginChainView.h"
 #include "audio/AudioEngine.h"
 #include "plugins/PluginManager.h"
+#include "Theme.h"
+#include "IconPaths.h"
 
 using namespace juce;
 
@@ -8,7 +10,7 @@ using namespace juce;
 
 PluginWindow::PluginWindow(AudioProcessor& processor, int idx)
     : DocumentWindow(processor.getName(),
-                     Colour(0xFF282828),
+                     filo::theme::colour::bgWindow,
                      DocumentWindow::closeButton)
     , chainIndex(idx)
 {
@@ -44,8 +46,7 @@ PluginRowComponent::PluginRowComponent(int index,
     , pluginMgr(mgr)
     , onChanged(std::move(changed))
 {
-    uiButton.setColour(TextButton::buttonColourId,    Colour(0xFF444444));
-    uiButton.setColour(TextButton::textColourOffId,   Colour(0xFFCCCCCC));
+    uiButton.setPath(filo::icons::monitor());
     uiButton.onClick = [this]
     {
         if (pluginWindow && pluginWindow->isVisible())
@@ -60,21 +61,19 @@ PluginRowComponent::PluginRowComponent(int index,
     };
     addAndMakeVisible(uiButton);
 
-    bypassBtn.setButtonText("bypass");
+    bypassBtn.setClickingTogglesState(true);
+    bypassBtn.setPath(filo::icons::power(false));
+    bypassBtn.setPathToggled(filo::icons::power(true));
     bypassBtn.setToggleState(bypassed, dontSendNotification);
-    bypassBtn.setColour(ToggleButton::textColourId,          Colour(0xFF888888));
-    bypassBtn.setColour(ToggleButton::tickColourId,          Colour(0xFFFFCC00));
-    bypassBtn.setColour(ToggleButton::tickDisabledColourId,  Colour(0xFF555555));
     bypassBtn.onStateChange = [this]
     {
         engine.setPluginBypassed(chainIndex, bypassBtn.getToggleState());
-        // Defer to avoid refreshing (and deleting) this component from within its own callback
         MessageManager::callAsync(onChanged);
     };
     addAndMakeVisible(bypassBtn);
 
-    removeButton.setColour(TextButton::buttonColourId,  Colour(0xFF442222));
-    removeButton.setColour(TextButton::textColourOffId, Colour(0xFFFF6666));
+    removeButton.setPath(filo::icons::cross());
+    removeButton.setDangerColour(true);
     removeButton.onClick = [this]
     {
         engine.removePlugin(chainIndex);
@@ -88,37 +87,64 @@ PluginRowComponent::~PluginRowComponent() = default;
 void PluginRowComponent::resized()
 {
     const int h    = getHeight();
-    const int pad  = 6;
-    const int btnH = h - pad * 2;
-    int x = getWidth();
+    const int pad  = filo::theme::spacing::s2;
+    const int gap  = filo::theme::spacing::s1;
+    const int btnSize = jmin(h - pad * 2, 32);
+    int x = getWidth() - pad;
 
-    x -= (30 + pad);
-    removeButton.setBounds(x, pad, 30, btnH);
+    x -= btnSize;
+    removeButton.setBounds(x, (h - btnSize) / 2, btnSize, btnSize);
+    x -= gap;
 
-    x -= (52 + pad);
-    bypassBtn.setBounds(x, pad, 52, btnH);
+    x -= btnSize;
+    bypassBtn.setBounds(x, (h - btnSize) / 2, btnSize, btnSize);
+    x -= gap;
 
-    x -= (36 + pad);
-    uiButton.setBounds(x, pad, 36, btnH);
+    x -= btnSize;
+    uiButton.setBounds(x, (h - btnSize) / 2, btnSize, btnSize);
 }
 
 void PluginRowComponent::paint(Graphics& g)
 {
-    const auto bounds = getLocalBounds().toFloat();
+    namespace c = filo::theme::colour;
 
-    g.setColour(bypassed ? Colour(0xFF252525) : Colour(0xFF2E2E2E));
-    g.fillRoundedRectangle(bounds.reduced(2.0f, 1.0f), 4.0f);
+    const auto bounds = getLocalBounds().toFloat().reduced(2.0f, 2.0f);
 
-    // drag handle
-    g.setColour(Colour(0xFF555555));
-    for (int i = 0; i < 3; ++i)
-        g.fillEllipse(8.0f, (float)(getHeight() / 2 - 6 + i * 6), 4.0f, 4.0f);
+    g.setColour(bypassed ? c::surface : c::surfaceElevated);
+    g.fillRoundedRectangle(bounds, filo::theme::radius::medium);
+
+    g.setColour(c::outline.withAlpha(bypassed ? 0.4f : 0.7f));
+    g.drawRoundedRectangle(bounds, filo::theme::radius::medium, 1.0f);
+
+    // drag handle (3 burger lines)
+    {
+        const float cx = 16.0f;
+        const float cy = (float) getHeight() * 0.5f;
+        Path handle;
+        for (int i = 0; i < 3; ++i)
+        {
+            const float y = cy - 5.0f + (float) i * 5.0f;
+            handle.startNewSubPath(cx - 6.0f, y);
+            handle.lineTo(cx + 6.0f, y);
+        }
+        g.setColour(c::silverDim);
+        g.strokePath(handle, PathStrokeType(1.6f, PathStrokeType::curved, PathStrokeType::rounded));
+    }
 
     // plugin name
-    g.setColour(bypassed ? Colour(0xFF666666) : Colour(0xFFEEEEEE));
-    g.setFont(Font(14.0f));
-    g.drawText(pluginName, 22, 0, getWidth() - 160, getHeight(),
+    g.setColour(bypassed ? c::textDisabled : c::textPrimary);
+    g.setFont(filo::theme::makeFont(filo::theme::font::base));
+    g.drawText(pluginName, 32, 0, getWidth() - 32 - 130, getHeight(),
                Justification::centredLeft, true);
+
+    // bypassed: diagonal slash
+    if (bypassed)
+    {
+        g.setColour(c::silverDim.withAlpha(0.4f));
+        const Line<float> line { bounds.getX() + 6.0f, bounds.getBottom() - 6.0f,
+                                 bounds.getRight() - 6.0f, bounds.getY() + 6.0f };
+        g.drawLine(line, 1.0f);
+    }
 }
 
 void PluginRowComponent::mouseDrag(const MouseEvent& e)
@@ -180,22 +206,39 @@ void PluginChainView::resized()
 
 void PluginChainView::paint(Graphics& g)
 {
-    g.fillAll(Colour(0xFF1E1E1E));
+    namespace c = filo::theme::colour;
 
     if (rows.empty())
     {
-        g.setColour(Colour(0xFF444444));
-        g.setFont(Font(13.0f));
+        g.setColour(c::textDisabled);
+        g.setFont(filo::theme::makeFont(filo::theme::font::sm));
         g.drawText("Nessun plugin. Clicca \"+ Aggiungi\".",
                    getLocalBounds(), Justification::centred, false);
     }
 
-    // drop indicator line
+    // drop indicator
     if (dragOverIndex >= 0)
     {
         const int lineY = dragOverIndex * kRowHeight;
-        g.setColour(Colour(0xFFD4A017));
-        g.fillRect(4, lineY - 1, getWidth() - 8, 2);
+        g.setColour(c::silverBright);
+        g.fillRect(8, lineY - 1, getWidth() - 16, 2);
+
+        // small triangle markers at sides
+        Path tri;
+        tri.startNewSubPath(2.0f, (float) lineY - 4.0f);
+        tri.lineTo(8.0f, (float) lineY);
+        tri.lineTo(2.0f, (float) lineY + 4.0f);
+        tri.closeSubPath();
+
+        const float rightX = (float) getWidth() - 8.0f;
+        Path triR;
+        triR.startNewSubPath((float) getWidth() - 2.0f, (float) lineY - 4.0f);
+        triR.lineTo(rightX, (float) lineY);
+        triR.lineTo((float) getWidth() - 2.0f, (float) lineY + 4.0f);
+        triR.closeSubPath();
+
+        g.fillPath(tri);
+        g.fillPath(triR);
     }
 }
 

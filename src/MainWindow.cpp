@@ -1,18 +1,20 @@
 #include "MainWindow.h"
 #include "MainComponent.h"
+#include "ui/Theme.h"
 
 MainWindow::MainWindow(juce::AudioDeviceManager& dm,
                        AudioEngine& engine,
                        PluginManager& pluginMgr,
                        juce::PropertiesFile& props)
     : DocumentWindow("Filo",
-                     juce::Colour(0xFF1A1A1A),
+                     filo::theme::colour::bgWindow,
                      DocumentWindow::closeButton)
 {
     setUsingNativeTitleBar(true);
     setContentOwned(new MainComponent(dm, engine, pluginMgr, props), true);
-    setResizable(false, false);
-    centreWithSize(420, 580);
+    setResizable(true, false);
+    setResizeLimits(380, 500, 1200, 2000);
+    centreWithSize(460, 640);
     setVisible(true);
 }
 

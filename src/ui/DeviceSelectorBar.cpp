@@ -1,4 +1,5 @@
 #include "DeviceSelectorBar.h"
+#include "Theme.h"
 
 using namespace juce;
 
@@ -9,8 +10,9 @@ DeviceSelectorBar::DeviceSelectorBar(AudioDeviceManager& dm)
 {
     auto setupLabel = [this](Label& lbl)
     {
-        lbl.setFont(Font(11.0f, Font::bold));
-        lbl.setColour(Label::textColourId, Colour(0xFF888888));
+        lbl.setFont(filo::theme::makeFont(filo::theme::font::xs, Font::plain, true));
+        lbl.setColour(Label::textColourId, filo::theme::colour::textSecondary);
+        lbl.setJustificationType(Justification::centredLeft);
         addAndMakeVisible(lbl);
     };
 
@@ -20,10 +22,6 @@ DeviceSelectorBar::DeviceSelectorBar(AudioDeviceManager& dm)
 
     auto setupCombo = [this](ComboBox& box)
     {
-        box.setColour(ComboBox::backgroundColourId,   Colour(0xFF333333));
-        box.setColour(ComboBox::textColourId,         Colour(0xFFEEEEEE));
-        box.setColour(ComboBox::arrowColourId,        Colour(0xFF888888));
-        box.setColour(ComboBox::outlineColourId,      Colour(0xFF404040));
         box.addListener(this);
         addAndMakeVisible(box);
     };
@@ -46,28 +44,34 @@ DeviceSelectorBar::~DeviceSelectorBar()
 
 void DeviceSelectorBar::resized()
 {
-    const int rowH   = 28;
-    const int gap    = 8;
-    const int labelW = 60;
-    const int x      = 0;
-    const int totalW = getWidth();
-    const int comboW = totalW - labelW - gap;
+    const int rowH       = 28;
+    const int rowGap     = 8;
+    const int labelW     = 64;
+    const int innerPad   = filo::theme::spacing::s3;
+    const int totalW     = getWidth();
+    const int comboW     = totalW - labelW - rowGap - innerPad * 2;
 
-    int y = 8;
-    inputLabel .setBounds(x, y, labelW, rowH);
-    inputCombo .setBounds(x + labelW + gap, y, comboW, rowH);
+    int y = innerPad;
+    inputLabel .setBounds(innerPad, y, labelW, rowH);
+    inputCombo .setBounds(innerPad + labelW + rowGap, y, comboW, rowH);
     y += rowH + 6;
-    outputLabel.setBounds(x, y, labelW, rowH);
-    outputCombo.setBounds(x + labelW + gap, y, comboW, rowH);
+    outputLabel.setBounds(innerPad, y, labelW, rowH);
+    outputCombo.setBounds(innerPad + labelW + rowGap, y, comboW, rowH);
     y += rowH + 6;
-    bufferLabel.setBounds(x, y, labelW, rowH);
-    bufferCombo.setBounds(x + labelW + gap, y, comboW, rowH);
+    bufferLabel.setBounds(innerPad, y, labelW, rowH);
+    bufferCombo.setBounds(innerPad + labelW + rowGap, y, comboW, rowH);
 }
 
 void DeviceSelectorBar::paint(Graphics& g)
 {
-    g.setColour(Colour(0xFF282828));
-    g.fillRect(getLocalBounds());
+    namespace c = filo::theme::colour;
+    const auto bounds = getLocalBounds().toFloat().reduced(0.5f);
+
+    g.setColour(c::surface);
+    g.fillRoundedRectangle(bounds, filo::theme::radius::medium);
+
+    g.setColour(c::outline);
+    g.drawRoundedRectangle(bounds, filo::theme::radius::medium, 1.0f);
 }
 
 void DeviceSelectorBar::populateDeviceLists()

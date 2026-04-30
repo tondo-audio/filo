@@ -42,6 +42,20 @@ juce_add_gui_app(Filo
     MICROPHONE_PERMISSION_TEXT      "Filo needs audio input access to process your guitar signal."
 )
 
+set(FILO_ASSET_SOURCES
+    resources/fonts/InterVariable.ttf
+)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources/logo/logo.svg")
+    list(APPEND FILO_ASSET_SOURCES resources/logo/logo.svg)
+    target_compile_definitions(Filo PRIVATE FILO_HAS_LOGO=1)
+endif()
+
+juce_add_binary_data(FiloAssets
+    HEADER_NAME FiloAssets.h
+    NAMESPACE filo::assets
+    SOURCES ${FILO_ASSET_SOURCES}
+)
+
 target_sources(Filo PRIVATE
     src/Main.cpp
     src/MainWindow.cpp
@@ -50,7 +64,11 @@ target_sources(Filo PRIVATE
     src/plugins/PluginManager.cpp
     src/plugins/PluginScannerSubprocess.cpp
     src/ui/DeviceSelectorBar.cpp
+    src/ui/FiloLookAndFeel.cpp
+    src/ui/IconButton.cpp
+    src/ui/IconPaths.cpp
     src/ui/LevelMeter.cpp
+    src/ui/LogoView.cpp
     src/ui/PluginChainView.cpp
 )
 
@@ -81,6 +99,7 @@ add_dependencies(Filo filo_version)
 target_include_directories(Filo PRIVATE ${CMAKE_BINARY_DIR})
 
 target_link_libraries(Filo PRIVATE
+    FiloAssets
     juce::juce_audio_utils
     juce::juce_audio_processors
     juce::juce_audio_devices

@@ -1,14 +1,13 @@
 #include "MainComponent.h"
 #include "audio/AudioEngine.h"
 #include "plugins/PluginManager.h"
+#include "ui/Theme.h"
+#include "ui/IconPaths.h"
 
 using namespace juce;
 
-static const Colour kBg        { 0xFF1A1A1A };
-static const Colour kSurface   { 0xFF282828 };
-static const Colour kAccent    { 0xFFD4A017 };
-static const Colour kText      { 0xFFEEEEEE };
-static const Colour kTextDim   { 0xFF888888 };
+namespace c = filo::theme::colour;
+namespace sp = filo::theme::spacing;
 
 MainComponent::MainComponent(AudioDeviceManager& dm,
                              AudioEngine& eng,
@@ -21,8 +20,7 @@ MainComponent::MainComponent(AudioDeviceManager& dm,
     , deviceBar(dm)
     , chainView(eng, mgr)
 {
-    setSize(420, 580);
-
+    addAndMakeVisible(logo);
     addAndMakeVisible(deviceBar);
 
     chainViewport.setViewedComponent(&chainView, false);
@@ -36,29 +34,29 @@ MainComponent::MainComponent(AudioDeviceManager& dm,
     auto setupMeterLabel = [this](Label& lbl, const String& text)
     {
         lbl.setText(text, dontSendNotification);
-        lbl.setFont(Font(10.0f, Font::bold));
-        lbl.setColour(Label::textColourId, kTextDim);
-        lbl.setJustificationType(Justification::centredRight);
+        lbl.setFont(filo::theme::makeFont(filo::theme::font::xs, Font::plain, true));
+        lbl.setColour(Label::textColourId, c::textSecondary);
+        lbl.setJustificationType(Justification::centredLeft);
         addAndMakeVisible(lbl);
     };
     setupMeterLabel(inputMeterLabel,  "INPUT");
     setupMeterLabel(outputMeterLabel, "OUTPUT");
 
-    addPluginButton.setColour(TextButton::buttonColourId,  kAccent.darker(0.3f));
-    addPluginButton.setColour(TextButton::textColourOffId, kText);
+    addPluginButton.setLabel("Aggiungi");
+    addPluginButton.setPath(filo::icons::plus());
     addPluginButton.onClick = [this] { showAddPluginMenu(); };
     addAndMakeVisible(addPluginButton);
 
-    rescanButton.setColour(TextButton::buttonColourId,  Colour(0xFF333333));
-    rescanButton.setColour(TextButton::textColourOffId, kTextDim);
+    rescanButton.setLabel("Ri-scansiona");
+    rescanButton.setPath(filo::icons::refresh());
     rescanButton.onClick = [this] { startScan(); };
     addAndMakeVisible(rescanButton);
 
-    statusLabel.setFont(Font(11.0f));
-    statusLabel.setColour(Label::textColourId, kTextDim);
+    statusLabel.setFont(filo::theme::makeFont(filo::theme::font::xs));
+    statusLabel.setColour(Label::textColourId, c::textSecondary);
+    statusLabel.setJustificationType(Justification::centredLeft);
     addAndMakeVisible(statusLabel);
 
-    // Auto-scan on first launch if plugin list is empty
     if (pluginMgr.getKnownPlugins().getNumTypes() == 0)
         startScan();
 
@@ -73,61 +71,65 @@ MainComponent::~MainComponent()
 
 void MainComponent::paint(Graphics& g)
 {
-    g.fillAll(kBg);
+    g.fillAll(c::bgBase);
 
-    // Header
-    g.setColour(kSurface);
-    g.fillRect(0, 0, getWidth(), 42);
+    constexpr int headerH = 48;
+    g.setColour(c::bgWindow);
+    g.fillRect(0, 0, getWidth(), headerH);
 
-    g.setColour(kAccent);
-    g.fillRect(0, 0, 3, 42);
+    g.setColour(c::separator);
+    g.fillRect(0, headerH,     getWidth(), 1);
+    g.setColour(c::silverDim.withAlpha(0.18f));
+    g.fillRect(0, headerH + 1, getWidth(), 1);
 
-    g.setColour(kText);
-    g.setFont(Font(16.0f, Font::bold));
-    g.drawText("Filo", 14, 0, 200, 42, Justification::centredLeft, false);
-
-    // Section separators
-    g.setColour(Colour(0xFF333333));
-    g.fillRect(0, 42 + 102 + 2, getWidth(), 1); // below device bar
-    g.fillRect(0, getHeight() - 50, getWidth(), 1); // above meters
+    constexpr int statusBarH = 22;
+    const int statusY = getHeight() - statusBarH;
+    g.setColour(c::separator);
+    g.fillRect(0, statusY, getWidth(), 1);
 }
 
 void MainComponent::resized()
 {
-    const int pad  = 12;
+    constexpr int headerH    = 48;
+    constexpr int toolbarH   = 36;
+    constexpr int meterAreaH = 64;
+    constexpr int statusBarH = 22;
+
+    const int pad  = sp::s4;
     const int w    = getWidth();
 
-    // Header (42px)
-    int y = 42;
+    logo.setBounds(pad, 8, 140, headerH - 12);
 
-    // Device bar
-    deviceBar.setBounds(pad, y + 4, w - pad * 2, 96);
-    y += 102;
+    int y = headerH + sp::s3;
 
-    // CATENA toolbar
-    const int toolbarH = 32;
-    addPluginButton.setBounds(w - pad - 110, y + 4, 110, 24);
-    rescanButton   .setBounds(w - pad - 226, y + 4, 108, 24);
-    statusLabel    .setBounds(pad, y + 4, 180, 24);
+    constexpr int deviceBarH = 108;
+    deviceBar.setBounds(pad, y, w - pad * 2, deviceBarH);
+    y += deviceBarH + sp::s3;
+
+    const int btnW = 130;
+    addPluginButton.setBounds(w - pad - btnW, y, btnW, toolbarH - 4);
+    rescanButton.setBounds(w - pad - btnW * 2 - sp::s2, y, btnW, toolbarH - 4);
     y += toolbarH;
 
-    // Chain viewport (flexible height)
-    const int meterAreaH = 50;
-    const int chainH = getHeight() - y - meterAreaH - pad;
-    chainViewport.setBounds(pad, y, w - pad * 2, chainH);
+    const int chainBottom = getHeight() - meterAreaH - statusBarH - sp::s2;
+    const int chainH = chainBottom - y;
+    chainViewport.setBounds(pad, y, w - pad * 2, jmax(chainH, 40));
     chainView.setSize(w - pad * 2 - 8, chainView.getHeight());
-    y += chainH + 4;
+    y = chainBottom + sp::s2;
 
-    // Meters
-    const int labelW  = 50;
-    const int meterH  = 14;
-    const int meterW  = w - pad * 2 - labelW - 6;
+    constexpr int meterH    = 12;
+    constexpr int labelH    = 12;
+    const int meterX        = pad;
+    const int meterW        = w - pad * 2;
 
-    inputMeterLabel .setBounds(pad, y + 2,  labelW, meterH);
-    inputMeter      .setBounds(pad + labelW + 6, y + 2,  meterW, meterH);
-    y += meterH + 8;
-    outputMeterLabel.setBounds(pad, y + 2, labelW, meterH);
-    outputMeter     .setBounds(pad + labelW + 6, y + 2, meterW, meterH);
+    inputMeterLabel.setBounds(meterX, y, meterW, labelH);
+    inputMeter     .setBounds(meterX, y + labelH + 2, meterW, meterH);
+    y += labelH + meterH + 6;
+    outputMeterLabel.setBounds(meterX, y, meterW, labelH);
+    outputMeter     .setBounds(meterX, y + labelH + 2, meterW, meterH);
+
+    statusLabel.setBounds(pad, getHeight() - statusBarH + 2,
+                          w - pad * 2, statusBarH - 4);
 }
 
 void MainComponent::timerCallback()
@@ -203,7 +205,6 @@ void MainComponent::startScan()
         }
         catch (...)
         {
-            // Scan thread caught an unhandled exception; results may be partial.
         }
 
         MessageManager::callAsync([this]
