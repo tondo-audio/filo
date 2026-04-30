@@ -5,24 +5,29 @@ using namespace juce;
 class LevelMeasurer : public AudioProcessor
 {
 public:
-    explicit LevelMeasurer(std::atomic<float>& levelOut)
+    LevelMeasurer(std::atomic<float>& peakOut, std::atomic<float>& rmsOut)
         : AudioProcessor(BusesProperties()
               .withInput("Input",   AudioChannelSet::stereo(), true)
               .withOutput("Output", AudioChannelSet::stereo(), true))
-        , levelRef(levelOut)
+        , peakRef(peakOut)
+        , rmsRef(rmsOut)
     {}
 
     void processBlock(AudioBuffer<float>& buffer, MidiBuffer&) override
     {
-        float rms = 0.0f;
+        float peak = 0.0f;
+        float rms  = 0.0f;
         const int numCh = buffer.getNumChannels();
-        if (numCh > 0)
+        const int numSamples = buffer.getNumSamples();
+        for (int ch = 0; ch < numCh; ++ch)
         {
-            for (int ch = 0; ch < numCh; ++ch)
-                rms += buffer.getRMSLevel(ch, 0, buffer.getNumSamples());
-            rms /= numCh;
+            peak = jmax(peak, buffer.getMagnitude(ch, 0, numSamples));
+            rms += buffer.getRMSLevel(ch, 0, numSamples);
         }
-        levelRef.store(rms);
+        if (numCh > 0)
+            rms /= numCh;
+        peakRef.store(peak);
+        rmsRef .store(rms);
     }
 
     const String getName() const override            { return "LevelMeasurer"; }
@@ -48,7 +53,8 @@ public:
     void setStateInformation(const void*, int) override {}
 
 private:
-    std::atomic<float>& levelRef;
+    std::atomic<float>& peakRef;
+    std::atomic<float>& rmsRef;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LevelMeasurer)
 };
 
@@ -63,9 +69,9 @@ AudioEngine::AudioEngine()
     auto outputNode = graph.addNode(
         std::make_unique<IOProc>(IOProc::audioOutputNode));
     auto inMeasurer = graph.addNode(
-        std::make_unique<LevelMeasurer>(inputLevel));
+        std::make_unique<LevelMeasurer>(inputPeak, inputRms));
     auto outMeasurer = graph.addNode(
-        std::make_unique<LevelMeasurer>(outputLevel));
+        std::make_unique<LevelMeasurer>(outputPeak, outputRms));
 
     inputNodeID           = inputNode->nodeID;
     outputNodeID          = outputNode->nodeID;

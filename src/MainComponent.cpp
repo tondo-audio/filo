@@ -141,8 +141,8 @@ void MainComponent::resized()
 
 void MainComponent::timerCallback()
 {
-    inputMeter .setLevel(engine.getInputLevel());
-    outputMeter.setLevel(engine.getOutputLevel());
+    inputMeter .setLevel(engine.getInputPeak(),  engine.getInputRms());
+    outputMeter.setLevel(engine.getOutputPeak(), engine.getOutputRms());
 }
 
 void MainComponent::showAddPluginMenu()

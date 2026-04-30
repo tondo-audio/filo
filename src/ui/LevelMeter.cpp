@@ -5,24 +5,35 @@
 
 using namespace juce;
 
-static inline float dBToGain(float dB) noexcept
-{
-    return std::pow(10.0f, dB * 0.05f);
-}
-
 LevelMeter::LevelMeter()
 {
     setOpaque(false);
 }
 
-void LevelMeter::setLevel(float rmsLinear)
+float LevelMeter::dbToNorm(float dB) noexcept
 {
-    const float kDecayFactor = 0.85f;
-    level = rmsLinear + (level - rmsLinear) * kDecayFactor;
+    return jlimit(0.0f, 1.0f,
+                  jmap(dB, kFloorDb, 0.0f, 0.0f, 1.0f));
+}
 
-    if (rmsLinear > peakLevel)
+float LevelMeter::linearToDb(float linear) noexcept
+{
+    return jmax(kFloorDb, 20.0f * std::log10(jmax(linear, 1.0e-6f)));
+}
+
+void LevelMeter::setLevel(float peakLinear, float rmsLinear)
+{
+    const float rmsDb  = linearToDb(rmsLinear);
+    const float peakDbInstant = linearToDb(peakLinear);
+
+    if (rmsDb >= levelDb)
+        levelDb = rmsDb;
+    else
+        levelDb = jmax(rmsDb, levelDb - kBarDecayDbPerFrame);
+
+    if (peakDbInstant >= peakDb)
     {
-        peakLevel      = rmsLinear;
+        peakDb         = peakDbInstant;
         peakHoldFrames = kPeakHoldDuration;
     }
     else if (peakHoldFrames > 0)
@@ -31,12 +42,12 @@ void LevelMeter::setLevel(float rmsLinear)
     }
     else
     {
-        peakLevel *= kDecayFactor;
+        peakDb = jmax(kFloorDb, peakDb - kPeakDecayDbPerFrame);
     }
 
-    if (rmsLinear >= 0.99f)
+    if (peakDbInstant >= kClipThresholdDb)
         clipFrames = kClipHoldFrames;
-    else if (clipFrames > 0 && rmsLinear < dBToGain(-3.0f))
+    else if (clipFrames > 0)
         --clipFrames;
 
     repaint();
@@ -53,41 +64,36 @@ void LevelMeter::paint(Graphics& g)
     g.setColour(c::surfaceSunken);
     g.fillRoundedRectangle(bounds, filo::theme::radius::small);
 
-    const float clampedLevel = jlimit(0.0f, 1.0f, level);
-    const float fillW = w * clampedLevel;
+    const float fillW = w * dbToNorm(levelDb);
 
     if (fillW > 0.0f)
     {
         ColourGradient grad(c::silverDim.withAlpha(0.45f), 0.0f, 0.0f,
                             c::silverBright,                w, 0.0f, false);
-        grad.addColour(0.92, c::danger);
+        grad.addColour(dbToNorm(-6.0f), c::silverBright);
+        grad.addColour(dbToNorm(-3.0f), c::danger);
 
         g.setGradientFill(grad);
         g.fillRoundedRectangle(bounds.withWidth(fillW), filo::theme::radius::small);
     }
 
-    // dB ticks
-    static const float ticksDb[] = { -40.0f, -30.0f, -20.0f, -12.0f, -6.0f, -3.0f, 0.0f };
+    static const float ticksDb[] = { -48.0f, -36.0f, -24.0f, -12.0f, -6.0f, 0.0f };
     g.setColour(c::separator);
     const float tickH = h * 0.3f;
     for (float dB : ticksDb)
     {
-        const float gain = dBToGain(dB);
-        const float x = w * gain;
+        const float x = w * dbToNorm(dB);
         g.fillRect(x, 0.0f, 1.0f, tickH);
         g.fillRect(x, h - tickH, 1.0f, tickH);
     }
 
-    // Peak marker
-    const float clampedPeak = jlimit(0.0f, 1.0f, peakLevel);
-    const float peakX = w * clampedPeak;
-    if (peakX > 1.0f)
+    const float peakX = w * dbToNorm(peakDb);
+    if (peakX > 1.0f && peakDb > kFloorDb)
     {
         g.setColour(c::silverBright);
         g.fillRect(peakX - 1.0f, 0.0f, 2.0f, h);
     }
 
-    // Outline + clip border
     g.setColour(clipFrames > 0 ? c::danger : c::outline);
     g.drawRoundedRectangle(bounds.reduced(0.5f), filo::theme::radius::small,
                            clipFrames > 0 ? 1.5f : 1.0f);

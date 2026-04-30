@@ -24,8 +24,10 @@ public:
     juce::AudioPluginInstance* getPlugin(int index) const;
     bool isPluginBypassed(int index) const;
 
-    float getInputLevel()  const { return inputLevel.load(); }
-    float getOutputLevel() const { return outputLevel.load(); }
+    float getInputPeak()   const { return inputPeak.load(); }
+    float getInputRms()    const { return inputRms.load(); }
+    float getOutputPeak()  const { return outputPeak.load(); }
+    float getOutputRms()   const { return outputRms.load(); }
 
 private:
     void rebuildConnections();
@@ -47,8 +49,10 @@ private:
 
     std::vector<ChainEntry> chain;
 
-    std::atomic<float> inputLevel  { 0.0f };
-    std::atomic<float> outputLevel { 0.0f };
+    std::atomic<float> inputPeak   { 0.0f };
+    std::atomic<float> inputRms    { 0.0f };
+    std::atomic<float> outputPeak  { 0.0f };
+    std::atomic<float> outputRms   { 0.0f };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioEngine)
 };
