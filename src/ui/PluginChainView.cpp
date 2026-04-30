@@ -65,7 +65,7 @@ PluginRowComponent::PluginRowComponent(int index,
     bypassBtn.setPath(filo::icons::power(false));
     bypassBtn.setPathToggled(filo::icons::power(true));
     bypassBtn.setToggleState(bypassed, dontSendNotification);
-    bypassBtn.onStateChange = [this]
+    bypassBtn.onClick = [this]
     {
         engine.setPluginBypassed(chainIndex, bypassBtn.getToggleState());
         MessageManager::callAsync(onChanged);
@@ -76,6 +76,7 @@ PluginRowComponent::PluginRowComponent(int index,
     removeButton.setDangerColour(true);
     removeButton.onClick = [this]
     {
+        pluginWindow.reset();
         engine.removePlugin(chainIndex);
         MessageManager::callAsync(onChanged);
     };
