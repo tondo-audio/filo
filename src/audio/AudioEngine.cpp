@@ -5,10 +5,12 @@ using namespace juce;
 class LevelMeasurer : public AudioProcessor
 {
 public:
-    LevelMeasurer(std::atomic<float>& peakOut, std::atomic<float>& rmsOut)
+    LevelMeasurer(std::atomic<float>& peakOut,
+                  std::atomic<float>& rmsOut,
+                  AudioChannelSet busLayout = AudioChannelSet::stereo())
         : AudioProcessor(BusesProperties()
-              .withInput("Input",   AudioChannelSet::stereo(), true)
-              .withOutput("Output", AudioChannelSet::stereo(), true))
+              .withInput("Input",   busLayout, true)
+              .withOutput("Output", busLayout, true))
         , peakRef(peakOut)
         , rmsRef(rmsOut)
     {}
@@ -60,7 +62,8 @@ private:
 
 AudioEngine::AudioEngine()
 {
-    graph.enableAllBuses();
+    graph.setChannelLayoutOfBus(true,  0, AudioChannelSet::stereo());
+    graph.setChannelLayoutOfBus(false, 0, AudioChannelSet::stereo());
 
     using IOProc = AudioProcessorGraph::AudioGraphIOProcessor;
 
@@ -68,8 +71,10 @@ AudioEngine::AudioEngine()
         std::make_unique<IOProc>(IOProc::audioInputNode));
     auto outputNode = graph.addNode(
         std::make_unique<IOProc>(IOProc::audioOutputNode));
+    // Input measurer is mono: collapses stereo input to a single guitar-friendly
+    // signal (sum L+R) before the plugin chain. Output measurer stays stereo.
     auto inMeasurer = graph.addNode(
-        std::make_unique<LevelMeasurer>(inputPeak, inputRms));
+        std::make_unique<LevelMeasurer>(inputPeak, inputRms, AudioChannelSet::mono()));
     auto outMeasurer = graph.addNode(
         std::make_unique<LevelMeasurer>(outputPeak, outputRms));
 
@@ -105,9 +110,8 @@ void AudioEngine::stop()
 
 void AudioEngine::addPlugin(std::unique_ptr<AudioPluginInstance> instance)
 {
-    instance->enableAllBuses();
     auto node = graph.addNode(std::move(instance));
-    chain.push_back({ node->nodeID, false });
+    chain.push_back({ node->nodeID });
     rebuildConnections();
 }
 
@@ -135,8 +139,8 @@ void AudioEngine::movePlugin(int fromIndex, int toIndex)
 void AudioEngine::setPluginBypassed(int index, bool bypassed)
 {
     if (index < 0 || index >= (int)chain.size()) return;
-    chain[index].bypassed = bypassed;
-    rebuildConnections();
+    if (auto* node = graph.getNodeForId(chain[index].nodeID))
+        node->setBypassed(bypassed);
 }
 
 int AudioEngine::getNumPlugins() const
@@ -155,7 +159,8 @@ AudioPluginInstance* AudioEngine::getPlugin(int index) const
 bool AudioEngine::isPluginBypassed(int index) const
 {
     if (index < 0 || index >= (int)chain.size()) return false;
-    return chain[index].bypassed;
+    auto* node = graph.getNodeForId(chain[index].nodeID);
+    return node != nullptr && node->isBypassed();
 }
 
 void AudioEngine::rebuildConnections()
@@ -167,12 +172,24 @@ void AudioEngine::rebuildConnections()
     nodes.push_back(inputNodeID);
     nodes.push_back(inputMeasurerNodeID);
     for (auto& entry : chain)
-        if (!entry.bypassed)
-            nodes.push_back(entry.nodeID);
+        nodes.push_back(entry.nodeID);
     nodes.push_back(outputMeasurerNodeID);
     nodes.push_back(outputNodeID);
 
     for (int i = 0; i < (int)nodes.size() - 1; ++i)
-        for (int ch = 0; ch < 2; ++ch)
-            graph.addConnection({ { nodes[i], ch }, { nodes[i + 1], ch } });
+    {
+        auto* a = graph.getNodeForId(nodes[i]);
+        auto* b = graph.getNodeForId(nodes[i + 1]);
+        if (a == nullptr || b == nullptr) continue;
+
+        const int aOut = a->getProcessor()->getMainBusNumOutputChannels();
+        const int bIn  = b->getProcessor()->getMainBusNumInputChannels();
+        if (aOut == 0 || bIn == 0) continue;
+
+        // Asymmetric channel routing: mono→stereo replicates, stereo→mono sums.
+        const int n = jmax(aOut, bIn);
+        for (int ch = 0; ch < n; ++ch)
+            graph.addConnection({ { nodes[i],     ch % aOut },
+                                  { nodes[i + 1], ch % bIn  } });
+    }
 }

@@ -35,7 +35,6 @@ private:
     struct ChainEntry
     {
         juce::AudioProcessorGraph::NodeID nodeID;
-        bool bypassed { false };
     };
 
     juce::AudioProcessorGraph graph;
