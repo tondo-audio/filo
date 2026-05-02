@@ -107,7 +107,7 @@ void MainComponent::resized()
 
     int y = headerH + sp::s3;
 
-    constexpr int deviceBarH = 108;
+    constexpr int deviceBarH = 154;
     deviceBar.setBounds(pad, y, w - pad * 2, deviceBarH);
     y += deviceBarH + sp::s3;
 

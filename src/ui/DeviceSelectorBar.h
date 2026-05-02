@@ -22,12 +22,14 @@ private:
 
     juce::AudioDeviceManager& deviceManager;
 
-    juce::Label inputLabel  { {}, "INPUT" };
-    juce::Label outputLabel { {}, "OUTPUT" };
-    juce::Label bufferLabel { {}, "BUFFER" };
+    juce::Label inputLabel      { {}, "INPUT"  };
+    juce::Label outputLabel     { {}, "OUTPUT" };
+    juce::Label sampleRateLabel { {}, "RATE"   };
+    juce::Label bufferLabel     { {}, "BUFFER" };
 
     juce::ComboBox inputCombo;
     juce::ComboBox outputCombo;
+    juce::ComboBox sampleRateCombo;
     juce::ComboBox bufferCombo;
 
     bool updating { false };

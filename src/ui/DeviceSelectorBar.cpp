@@ -18,6 +18,7 @@ DeviceSelectorBar::DeviceSelectorBar(AudioDeviceManager& dm)
 
     setupLabel(inputLabel);
     setupLabel(outputLabel);
+    setupLabel(sampleRateLabel);
     setupLabel(bufferLabel);
 
     auto setupCombo = [this](ComboBox& box)
@@ -28,6 +29,7 @@ DeviceSelectorBar::DeviceSelectorBar(AudioDeviceManager& dm)
 
     setupCombo(inputCombo);
     setupCombo(outputCombo);
+    setupCombo(sampleRateCombo);
     setupCombo(bufferCombo);
 
     for (int i = 0; i < (int)std::size(kBufferSizes); ++i)
@@ -57,6 +59,9 @@ void DeviceSelectorBar::resized()
     y += rowH + 6;
     outputLabel.setBounds(innerPad, y, labelW, rowH);
     outputCombo.setBounds(innerPad + labelW + rowGap, y, comboW, rowH);
+    y += rowH + 6;
+    sampleRateLabel.setBounds(innerPad, y, labelW, rowH);
+    sampleRateCombo.setBounds(innerPad + labelW + rowGap, y, comboW, rowH);
     y += rowH + 6;
     bufferLabel.setBounds(innerPad, y, labelW, rowH);
     bufferCombo.setBounds(innerPad + labelW + rowGap, y, comboW, rowH);
@@ -103,6 +108,27 @@ void DeviceSelectorBar::populateDeviceLists()
     inputCombo .setText(setup.inputDeviceName,  dontSendNotification);
     outputCombo.setText(setup.outputDeviceName, dontSendNotification);
 
+    // Sample rate combo (depends on current device's supported rates)
+    sampleRateCombo.clear(dontSendNotification);
+    if (device != nullptr)
+    {
+        const auto rates = device->getAvailableSampleRates();
+        for (int i = 0; i < rates.size(); ++i)
+        {
+            const double r = rates[i];
+            sampleRateCombo.addItem(String(r, 0) + " Hz", i + 1);
+        }
+        const double currentRate = device->getCurrentSampleRate();
+        for (int i = 0; i < rates.size(); ++i)
+        {
+            if (std::abs(rates[i] - currentRate) < 0.5)
+            {
+                sampleRateCombo.setSelectedItemIndex(i, dontSendNotification);
+                break;
+            }
+        }
+    }
+
     // Select current buffer size
     const int currentBuf = (device != nullptr) ? device->getCurrentBufferSizeSamples() : 128;
     for (int i = 0; i < (int)std::size(kBufferSizes); ++i)
@@ -127,11 +153,22 @@ void DeviceSelectorBar::applySetup()
 
     const String inputName  = inputCombo.getText();
     const String outputName = outputCombo.getText();
+    const int    rateIdx    = sampleRateCombo.getSelectedItemIndex();
     const int    bufIdx     = bufferCombo.getSelectedItemIndex();
 
     if (inputName.isNotEmpty())  setup.inputDeviceName  = inputName;
     if (outputName.isNotEmpty()) setup.outputDeviceName = outputName;
     if (bufIdx >= 0)             setup.bufferSize       = kBufferSizes[bufIdx];
+
+    if (rateIdx >= 0)
+    {
+        if (auto* dev = deviceManager.getCurrentAudioDevice())
+        {
+            const auto rates = dev->getAvailableSampleRates();
+            if (rateIdx < rates.size())
+                setup.sampleRate = rates[rateIdx];
+        }
+    }
 
     setup.useDefaultInputChannels  = true;
     setup.useDefaultOutputChannels = true;
