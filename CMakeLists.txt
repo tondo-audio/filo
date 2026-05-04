@@ -80,7 +80,6 @@ target_include_directories(Filo PRIVATE
 )
 
 target_compile_definitions(Filo PRIVATE
-    JUCE_PLUGINHOST_AU=1
     JUCE_PLUGINHOST_VST3=1
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
@@ -88,6 +87,10 @@ target_compile_definitions(Filo PRIVATE
     JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:Filo,JUCE_PRODUCT_NAME>"
     JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:Filo,JUCE_VERSION>"
 )
+
+if(APPLE)
+    target_compile_definitions(Filo PRIVATE JUCE_PLUGINHOST_AU=1)
+endif()
 
 set(FILO_VERSION_HEADER ${CMAKE_BINARY_DIR}/filo_version.h)
 add_custom_target(filo_version ALL

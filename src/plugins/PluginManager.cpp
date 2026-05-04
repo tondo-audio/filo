@@ -34,25 +34,6 @@ namespace
     }
 }
 
-static FileSearchPath getSearchPathsForFormat(const String& formatName)
-{
-    FileSearchPath paths;
-    const File homeDir = File::getSpecialLocation(File::userHomeDirectory);
-
-    if (formatName == "AudioUnit")
-    {
-        paths.add(File("/Library/Audio/Plug-Ins/Components"));
-        paths.add(homeDir.getChildFile("Library/Audio/Plug-Ins/Components"));
-    }
-    else if (formatName == "VST3")
-    {
-        paths.add(File("/Library/Audio/Plug-Ins/VST3"));
-        paths.add(homeDir.getChildFile("Library/Audio/Plug-Ins/VST3"));
-    }
-
-    return paths;
-}
-
 PluginManager::PluginManager()
 {
     formatManager.addDefaultFormats();
@@ -90,7 +71,7 @@ void PluginManager::scanPlugins(std::function<void(int, String)> progress)
 
     for (auto* format : orderedFormats)
     {
-        const FileSearchPath searchPath = getSearchPathsForFormat(format->getName());
+        const FileSearchPath searchPath = format->getDefaultLocationsToSearch();
         if (searchPath.getNumPaths() == 0) continue;
 
         // Pedal file kept as belt-and-braces: il custom scanner gestisce gia il crash via blacklist,
