@@ -38,6 +38,7 @@ juce_add_gui_app(Filo
     BUNDLE_ID                       "audio.tondo.filo"
     PRODUCT_NAME                    "Filo"
     COMPANY_NAME                    "Tondo Audio"
+    ICON_BIG                        "${CMAKE_CURRENT_SOURCE_DIR}/resources/logo/app_icon.png"
     MICROPHONE_PERMISSION_ENABLED   TRUE
     MICROPHONE_PERMISSION_TEXT      "Filo needs audio input access to process your guitar signal."
 )
@@ -110,3 +111,12 @@ target_link_libraries(Filo PRIVATE
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags
 )
+
+if(APPLE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources/logo/app_icon.png")
+    add_custom_command(TARGET Filo POST_BUILD
+        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/cmake/make_icns.sh"
+                "${CMAKE_CURRENT_SOURCE_DIR}/resources/logo/app_icon.png"
+                "$<TARGET_FILE_DIR:Filo>/../Resources/Icon.icns"
+        VERBATIM
+        COMMENT "Generating multi-resolution Icon.icns")
+endif()
